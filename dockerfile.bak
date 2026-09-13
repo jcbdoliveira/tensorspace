@@ -1,23 +1,25 @@
-# Usa uma imagem oficial antiga do Python 3.6 baseada em Debian
+# Usa a imagem estável do Python 3.6
 FROM python:3.6-slim
 
-# Instala dependências do sistema necessárias para compilar bibliotecas antigas
+# Altera as fontes do apt-get para apontar para o repositório de arquivos mortos (archive)
+RUN sed -i 's/deb.debian.org/archive.debian.org/g' /etc/apt/sources.list && \
+    sed -i 's/security.debian.org/archive.debian.org/g' /etc/apt/sources.list && \
+    sed -i '/stretch-updates/d' /etc/apt/sources.list
+
+# Agora o apt-get update vai funcionar sem o erro 100
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Instala o Flask para criarmos uma API de conversão e o conversor do TensorSpace
+# Atualiza ferramentas essenciais de pacotes e instala o conversor
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir flask tensorspacejs
 
-# Cria pastas para os modelos brutos e convertidos
 RUN mkdir -p /app/raw /app/converted
-
-# Copia o código da nossa mini-API (passo abaixo)
 COPY app.py /app/app.py
 
-# Porta padrão que o Render exige para Web Services
 EXPOSE 10000
 
 CMD ["python", "app.py"]
