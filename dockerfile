@@ -1,23 +1,23 @@
-# Usa uma imagem do Python estável e compatível
-FROM python:3.8-slim
+# Usa uma imagem oficial que já vem com Python 3.8 e Node.js instalados de fábrica
+FROM nikolaik/python-nodejs:python3.8-nodejs14-slim
 
 WORKDIR /app
 
-# 1. Instala ferramentas de compilação do Linux, curl e o Node.js v12 com NPM legados
+# Instala ferramentas essenciais de compilação do Linux exigidas por pacotes C antigos
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    curl \
-    && curl -sL https://nodesource.com | bash - \
-    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Instala o Flask para a API e o pacote do TensorSpace
+# Atualiza os gerenciadores de pacotes internos
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Instala o Flask e o conversor do TensorSpace
 RUN pip install --no-cache-dir flask tensorspacejs
 
-# 3. PASSO CRUCIAL: Inicializa as dependências Node internas do TensorSpace Converter
+# Inicializa as dependências de Node internas do TensorSpace Converter
 RUN tensorspacejs_converter -init
 
-# 4. Estrutura os diretórios de trabalho da aplicação
+# Organiza os arquivos da aplicação
 RUN mkdir -p /app/raw /app/converted
 COPY app.py /app/app.py
 
