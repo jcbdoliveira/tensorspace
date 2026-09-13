@@ -10,6 +10,11 @@ CONVERTED_FOLDER = '/app/converted'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(CONVERTED_FOLDER, exist_ok=True)
 
+# Rota simples apenas para o Render não dar erro 404 ao abrir a página inicial
+@app.route('/', methods=['GET'])
+def home():
+    return "Conversor TensorSpace Ativo!", 200
+
 @app.route('/convert', methods=['POST'])
 def convert():
     if 'model' not in request.files:
@@ -21,10 +26,10 @@ def convert():
     input_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(input_path)
     
-    model_name = os.path.splitext(file.filename)
+    # CORREÇÃO AQUI: Pegando o índice [0] da tupla retornada
+    model_name = os.path.splitext(file.filename)[0]
     output_dir = os.path.join(CONVERTED_FOLDER, model_name)
     
-    # Remove pasta antiga se existir
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)
         
@@ -42,7 +47,6 @@ def convert():
     if resultado.returncode != 0:
         return jsonify({"erro": resultado.stderr}), 500
         
-    # Compacta a pasta convertida em um arquivo .zip para baixar
     zip_path = shutil.make_archive(output_dir, 'zip', output_dir)
     
     return send_file(zip_path, as_attachment=True)
