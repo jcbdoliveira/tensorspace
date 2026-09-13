@@ -33,8 +33,9 @@ def convert():
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)
         
+    # O comando agora chama o módulo interno do pacote diretamente pelo interpretador
     comando = [
-        "tensorspacejs_converter",
+        "python", "-m", "tensorspacejs.converter.main",
         "--input_model_from=keras",
         "--input_model_format=topology_weights_combined",
         f"--output_layer_names={camadas}",
@@ -43,6 +44,7 @@ def convert():
     ]
     
     resultado = subprocess.run(comando, capture_output=True, text=True)
+
     
     if resultado.returncode != 0:
         return jsonify({"erro": resultado.stderr}), 500
