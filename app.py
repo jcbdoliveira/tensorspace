@@ -2,18 +2,7 @@ from flask import Flask, request, send_file, jsonify
 import subprocess
 import os
 import shutil
-
-app = Flask(__name__)
-UPLOAD_FOLDER = '/app/raw'
-CONVERTED_FOLDER = '/app/converted'
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(CONVERTED_FOLDER, exist_ok=True)
-
-# Rota simples apenas para o Render não dar erro 404 ao abrir a página inicial
-@app.route('/', methods=['GET'])
-def home():
-    return "Conversor TensorSpace Ativo!", 200
+import sys # Adicionado para mapear o caminho do Python
 
 @app.route('/convert', methods=['POST'])
 def convert():
@@ -33,9 +22,14 @@ def convert():
         shutil.rmtree(output_dir)
         
     try:
-        # Encontra o caminho absoluto oculto do binário
-        caminho_conversor = subprocess.check_output(["which", "tensorspacejs_converter"]).decode().strip()
+        # Encontra dinamicamente a pasta de executáveis (bin) vinculada ao Python do container
+        pasta_bin = os.path.dirname(sys.executable)
+        caminho_conversor = os.path.join(pasta_bin, "tensorspacejs_converter")
         
+        # Garante segurança caso o executável esteja em outro local comum do Linux
+        if not os.path.exists(caminho_conversor):
+            caminho_conversor = "/usr/local/bin/tensorspacejs_converter"
+
         comando = [
             caminho_conversor,
             "--input_model_from=keras",
@@ -45,18 +39,18 @@ def convert():
             output_dir
         ]
         
+        # Executa a conversão real das camadas da CNN
         resultado = subprocess.run(comando, capture_output=True, text=True)
         
         if resultado.returncode != 0:
-            return jsonify({"erro": resultado.stderr, "log_interno": resultado.stdout}), 500
+            # Caso o conversor antigo rejeite a estrutura do H5, retorna o erro exato do compilador
+            return jsonify({
+                "erro": "O conversor do TensorSpace falhou ao processar o arquivo H5.",
+                "detalhes_do_conversor": resultado.stderr
+            }), 500
             
         zip_path = shutil.make_archive(output_dir, 'zip', output_dir)
         return send_file(zip_path, as_attachment=True)
         
     except Exception as e:
-        return jsonify({"erro": f"Falha na execução do sistema: {str(e)}"}), 500
-
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+        return jsonify({"erro": f"Erro interno no script de automação: {str(e)}"}), 500
