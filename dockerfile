@@ -1,4 +1,5 @@
-dockerfile# Troque a versão antiga por uma ligeiramente mais recente que ainda aceite as dependências
+dockerfile
+# Troque a versão antiga por uma ligeiramente mais recente que ainda aceite as dependências
 FROM python:3.8-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

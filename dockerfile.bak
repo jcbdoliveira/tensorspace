@@ -1,12 +1,6 @@
-# Usa a imagem estável do Python 3.6
-FROM python:3.6-slim
+dockerfile# Troque a versão antiga por uma ligeiramente mais recente que ainda aceite as dependências
+FROM python:3.8-slim
 
-# Altera as fontes do apt-get para apontar para o repositório de arquivos mortos (archive)
-RUN sed -i 's/deb.debian.org/archive.debian.org/g' /etc/apt/sources.list && \
-    sed -i 's/security.debian.org/archive.debian.org/g' /etc/apt/sources.list && \
-    sed -i '/stretch-updates/d' /etc/apt/sources.list
-
-# Agora o apt-get update vai funcionar sem o erro 100
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
