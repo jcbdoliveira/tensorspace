@@ -4,7 +4,6 @@ import os
 import shutil
 import sys
 
-# 1. DEFINIÇÃO DO APP (Deve vir antes de qualquer rota)
 app = Flask(__name__)
 
 UPLOAD_FOLDER = '/app/raw'
@@ -13,12 +12,10 @@ CONVERTED_FOLDER = '/app/converted'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(CONVERTED_FOLDER, exist_ok=True)
 
-# Rota de teste padrão para checar se o servidor está online
 @app.route('/', methods=['GET'])
 def home():
     return "Conversor TensorSpace Ativo!", 200
 
-# Rota principal que recebe a requisição do seu Python 3.11 local
 @app.route('/convert', methods=['POST'])
 def convert():
     if 'model' not in request.files:
@@ -30,7 +27,6 @@ def convert():
     input_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(input_path)
     
-    # Extrai o nome do arquivo para criar uma pasta organizada
     model_name = os.path.splitext(file.filename)[0]
     output_dir = os.path.join(CONVERTED_FOLDER, model_name)
     
@@ -38,13 +34,24 @@ def convert():
         shutil.rmtree(output_dir)
         
     try:
-        # Localiza a pasta binária interna do Python do container
-        pasta_bin = os.path.dirname(sys.executable)
-        caminho_conversor = os.path.join(pasta_bin, "tensorspacejs_converter")
+        # --- BUSCA INTELIGENTE PELO EXECUTÁVEL ---
+        caminhos_possiveis = [
+            os.path.join(os.path.dirname(sys.executable), "tensorspacejs_converter"),
+            "/usr/local/bin/tensorspacejs_converter",
+            "/root/.local/bin/tensorspacejs_converter",
+            "/usr/bin/tensorspacejs_converter"
+        ]
         
-        # Fallback de segurança para o caminho padrão Linux
-        if not os.path.exists(caminho_conversor):
-            caminho_conversor = "/usr/local/bin/tensorspacejs_converter"
+        caminho_conversor = None
+        for caminho in caminhos_possiveis:
+            if os.path.exists(caminho):
+                caminho_conversor = caminho
+                break
+                
+        # Se mesmo assim não achar na marra, tenta disparar o comando cru puro
+        if not caminho_conversor:
+            caminho_conversor = "tensorspacejs_converter"
+        # ----------------------------------------
 
         comando = [
             caminho_conversor,
@@ -59,16 +66,16 @@ def convert():
         
         if resultado.returncode != 0:
             return jsonify({
-                "erro": "O conversor interno falhou.",
-                "detalhes": resultado.stderr
+                "erro": "O conversor do TensorSpace falhou internamente.",
+                "detalhes_do_conversor_stderr": resultado.stderr,
+                "detalhes_do_conversor_stdout": resultado.stdout
             }), 500
             
-        # Compacta a pasta de saída em um único .zip
         zip_path = shutil.make_archive(output_dir, 'zip', output_dir)
         return send_file(zip_path, as_attachment=True)
         
     except Exception as e:
-        return jsonify({"erro": f"Erro interno na automação: {str(e)}"}), 500
+        return jsonify({"erro": f"Erro interno na automação do servidor: {str(e)}"}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
