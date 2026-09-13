@@ -26,32 +26,36 @@ def convert():
     input_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(input_path)
     
-    # CORREÇÃO AQUI: Pegando o índice [0] da tupla retornada
     model_name = os.path.splitext(file.filename)[0]
     output_dir = os.path.join(CONVERTED_FOLDER, model_name)
     
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)
         
-    # O comando agora chama o módulo interno do pacote diretamente pelo interpretador
-    comando = [
-        "python", "-m", "tensorspacejs.converter.main",
-        "--input_model_from=keras",
-        "--input_model_format=topology_weights_combined",
-        f"--output_layer_names={camadas}",
-        input_path,
-        output_dir
-    ]
-    
-    resultado = subprocess.run(comando, capture_output=True, text=True)
-
-    
-    if resultado.returncode != 0:
-        return jsonify({"erro": resultado.stderr}), 500
+    try:
+        # Encontra o caminho absoluto oculto do binário
+        caminho_conversor = subprocess.check_output(["which", "tensorspacejs_converter"]).decode().strip()
         
-    zip_path = shutil.make_archive(output_dir, 'zip', output_dir)
-    
-    return send_file(zip_path, as_attachment=True)
+        comando = [
+            caminho_conversor,
+            "--input_model_from=keras",
+            "--input_model_format=topology_weights_combined",
+            f"--output_layer_names={camadas}",
+            input_path,
+            output_dir
+        ]
+        
+        resultado = subprocess.run(comando, capture_output=True, text=True)
+        
+        if resultado.returncode != 0:
+            return jsonify({"erro": resultado.stderr, "log_interno": resultado.stdout}), 500
+            
+        zip_path = shutil.make_archive(output_dir, 'zip', output_dir)
+        return send_file(zip_path, as_attachment=True)
+        
+    except Exception as e:
+        return jsonify({"erro": f"Falha na execução do sistema: {str(e)}"}), 500
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
