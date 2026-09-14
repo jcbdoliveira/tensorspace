@@ -3,11 +3,11 @@ import zipfile
 import io
 import os
 
-# 1. CORREÇÃO DA URL: Adicionado o /convert no final
-url_render = "https://tensorspace.onrender.com"
+# 1. Altere o link abaixo para a URL real que o seu Render gerou
+url_render = "https://tensorspace.onrender.com/convert"
 caminho_modelo = "cnn_mnist.keras"
 
-# Pasta local onde os arquivos descompactados serão salvos
+# Pasta local onde os arquivos descompactados serao salvos
 pasta_destino = "./modelo_tensorspace_pronto"
 
 print("Enviando modelo... O Render vai extrair as camadas e converter tudo.")
@@ -18,15 +18,15 @@ try:
         resposta = requests.post(url_render, files=arquivos)
 
     if resposta.status_code == 200:
-        print("Conversão concluída! Descompactando arquivos localmente...")
+        print("Conversao concluida! Descompactando arquivos localmente...")
         
-        # Abre o zip recebido direto da memória RAM e extrai na pasta
+        # Abre o zip recebido direto da memoria RAM e extrai na pasta
         zip_arquivos = zipfile.ZipFile(io.BytesIO(resposta.content))
         os.makedirs(pasta_destino, exist_ok=True)
         zip_arquivos.extractall(pasta_destino)
         
         print(f"\n[SUCESSO] Arquivos salvos na pasta: {os.path.abspath(pasta_destino)}")
-        print("Conteúdo gerado para usar no seu HTML:")
+        print("Conteudo gerado para usar no seu HTML:")
         for item in os.listdir(pasta_destino):
             print(f" -> {item}")
     else:
@@ -35,5 +35,3 @@ try:
 
 except Exception as e:
     print(f"\nErro ao conectar com o Render: {e}")
-
-
