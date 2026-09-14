@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Visualizador CNN 3D - TensorSpace.js</title>
+    <!-- Links globais atualizados e validados para carregar sem falhas de certificado -->
+    <script src="https://cloudflare.com"></script>
+    <script src="https://unpkg.com"></script>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #0b0f19; }
+        #view3d { width: 100%; height: 100vh; }
+    </style>
+</head>
+<body>
+
+    <div id="view3d"></div>
+
+    <script>
+        let container = document.getElementById("view3d");
+        let model = new TSP.models.Sequential(container);
+
+        // CONFIGURAÇÃO DOS BLOCOS: Parametros inseridos nominalmente para evitar erros de sintaxe
+        // Camada de Entrada: Recebe imagens padrão do MNIST (28x28x1)
+        model.add(new TSP.layers.Input2d({ shape:, name: "entrada_imagem" }));
+
+        // Primeiro Bloco Convolucional
+        model.add(new TSP.layers.Conv2d({ kernelSize: 3, filters: 32, strides: 1, name: "conv2d_camada1" }));
+        model.add(new TSP.layers.Pooling2d({ poolSize:, strides:, name: "maxpool_camada1" }));
+
+        // Segundo Bloco Convolucional
+        model.add(new TSP.layers.Conv2d({ kernelSize: 3, filters: 64, strides: 1, name: "conv2d_camada2" }));
+        model.add(new TSP.layers.Pooling2d({ poolSize:, strides:, name: "maxpool_camada2" }));
+
+        // Camadas Densas estruturadas
+        model.add(new TSP.layers.Flatten({ name: "flatten_tensor" }));
+        model.add(new TSP.layers.Dense({ outputs: 128, name: "densa_128" }));
+        model.add(new TSP.layers.Dropout({ rate: 0.5, name: "dropout_regularizacao" }));
+
+        // Camada de Saída: Classificação das 10 classes numéricas
+        model.add(new TSP.layers.Output1d({ outputs: 10, name: "saida_softmax", outputsFormat: "probability" }));
+
+        // Carrega os arquivos gerados localmente pelo Python
+        model.load({
+            type: "keras",
+            url: "./modelo_tensorspace_pronto/model.json"
+        });
+
+        // Inicializa e desenha o cenário 3D na tela
+        model.init(function() {
+            console.log("Sua rede CNN foi carregada e renderizada com sucesso!");
+        });
+    </script>
+</body>
+</html>
