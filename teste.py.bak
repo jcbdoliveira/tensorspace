@@ -1,7 +1,7 @@
 import requests
 
-url_render = "https://tensorspace.onrender.com"
-caminho_modelo = "cnn_mnist.keras"
+url_render = "https://onrender.com"
+caminho_modelo = "sua_cnn.keras"
 
 print("Enviando modelo... O Render vai extrair as camadas e converter tudo.")
 with open(caminho_modelo, "rb") as f:
