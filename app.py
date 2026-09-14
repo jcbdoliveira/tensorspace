@@ -1,20 +1,13 @@
-from flask import Flask, request, send_file, jsonify
-import subprocess
+# app.py (Vers„o que extrai as camadas do .keras de forma 100% autom·tica)
+import tensorflow as tf
 import os
 import shutil
-import sys
+import subprocess
+from flask import Flask, request, send_file, jsonify
 
 app = Flask(__name__)
-
 UPLOAD_FOLDER = '/app/raw'
 CONVERTED_FOLDER = '/app/converted'
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(CONVERTED_FOLDER, exist_ok=True)
-
-@app.route('/', methods=['GET'])
-def home():
-    return "Conversor TensorSpace Ativo!", 200
 
 @app.route('/convert', methods=['POST'])
 def convert():
@@ -22,61 +15,50 @@ def convert():
         return jsonify({"erro": "Nenhum arquivo enviado"}), 400
     
     file = request.files['model']
-    camadas = request.form.get('layers', '')
     
-    input_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(input_path)
+    # Salva o arquivo .keras tempor·rio enviado pela sua m·quina
+    keras_zip_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(keras_zip_path)
     
-    model_name = os.path.splitext(file.filename)[0]
-    output_dir = os.path.join(CONVERTED_FOLDER, model_name)
+    model_base_name = os.path.splitext(file.filename)[0]
+    legacy_h5_path = os.path.join(UPLOAD_FOLDER, f"{model_base_name}_legacy.h5")
+    output_dir = os.path.join(CONVERTED_FOLDER, model_base_name)
     
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
-        
     try:
-        # --- BUSCA INTELIGENTE PELO EXECUT√ÅVEL ---
-        caminhos_possiveis = [
-            os.path.join(os.path.dirname(sys.executable), "tensorspacejs_converter"),
-            "/usr/local/bin/tensorspacejs_converter",
-            "/root/.local/bin/tensorspacejs_converter",
-            "/usr/bin/tensorspacejs_converter"
-        ]
+        # 1. Carrega o modelo usando o TensorFlow do container
+        modelo_carregado = tf.keras.models.load_model(keras_zip_path)
         
-        caminho_conversor = None
-        for caminho in caminhos_possiveis:
-            if os.path.exists(caminho):
-                caminho_conversor = caminho
-                break
-                
-        # Se mesmo assim n√£o achar na marra, tenta disparar o comando cru puro
-        if not caminho_conversor:
-            caminho_conversor = "tensorspacejs_converter"
-        # ----------------------------------------
-
+        # 2. AUTOMA«√O: Descobre todas as camadas do seu .keras sozinho
+        nomes_camadas = [layer.name for layer in modelo_carregado.layers]
+        camadas_str = ",".join(nomes_camadas)
+        print(f"Camadas detectadas automaticamente: {camadas_str}")
+        
+        # 3. Salva no formato HDF5 legado puro combinado
+        modelo_carregado.save(legacy_h5_path, save_format="h5")
+        
+        if os.path.exists(output_dir):
+            shutil.rmtree(output_dir)
+            
+        # 4. Aciona o conversor usando as camadas extraÌdas de forma nativa
         comando = [
-            caminho_conversor,
-            "--input_model_from=keras",
-            "--input_model_format=topology_weights_combined",
-            f"--output_layer_names={camadas}",
-            input_path,
+            "python", "-m", "tensorspace_compiler.main",
+            "--input_model_format=keras",
+            f"--output_layer_names={camadas_str}", # Injetado automaticamente pelo servidor
+            legacy_h5_path,
             output_dir
         ]
         
         resultado = subprocess.run(comando, capture_output=True, text=True)
         
+        # Limpeza de arquivos tempor·rios do servidor
+        if os.path.exists(keras_zip_path): os.remove(keras_zip_path)
+        if os.path.exists(legacy_h5_path): os.remove(legacy_h5_path)
+        
         if resultado.returncode != 0:
-            return jsonify({
-                "erro": "O conversor do TensorSpace falhou internamente.",
-                "detalhes_do_conversor_stderr": resultado.stderr,
-                "detalhes_do_conversor_stdout": resultado.stdout
-            }), 500
+            return jsonify({"erro": "Falha no tensorflowjs", "detalhes": resultado.stderr}), 500
             
         zip_path = shutil.make_archive(output_dir, 'zip', output_dir)
         return send_file(zip_path, as_attachment=True)
         
     except Exception as e:
-        return jsonify({"erro": f"Erro interno na automa√ß√£o do servidor: {str(e)}"}), 500
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+        return jsonify({"erro": "Falha na extraÁ„o autom·tica", "detalhes": str(e)}), 500
