@@ -6,7 +6,7 @@ caminho_modelo = "sua_cnn.keras"
 print("Enviando modelo... O Render vai extrair as camadas e converter tudo.")
 with open(caminho_modelo, "rb") as f:
     arquivos = {"model": f}
-    # NÃO precisa mais passar o dicionário 'data={"layers": ...}'
+    # Nï¿½O precisa mais passar o dicionï¿½rio 'data={"layers": ...}'
     resposta = requests.post(url_render, files=arquivos)
 
 if resposta.status_code == 200:
@@ -15,3 +15,4 @@ if resposta.status_code == 200:
     print("Sucesso! Arquivo pronto baixado.")
 else:
     print(f"Erro: {resposta.text}")
+
