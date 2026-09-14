@@ -1,5 +1,5 @@
 import os
-# IMPORTANTE: Força o TensorFlow a usar apenas a CPU e silencia avisos pesados de CUDA
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
@@ -11,7 +11,7 @@ app = Flask(__name__)
 UPLOAD_FOLDER = '/app/raw'
 CONVERTED_FOLDER = '/app/converted'
 
-# Garante que o Linux crie as pastas se elas não existirem no build
+
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(CONVERTED_FOLDER, exist_ok=True)
 
@@ -30,8 +30,7 @@ def convert():
     output_dir = os.path.join(CONVERTED_FOLDER, model_base_name)
     
     try:
-        # IMPORTAÇÃO ATRASADA (Lazy Import): O TensorFlow só é carregado na RAM quando
-        # uma requisição chega. Isso evita que o Render derrube o app no início por falta de memória.
+      
         import tensorflow as tf
         
         modelo_carregado = tf.keras.models.load_model(keras_zip_path)
@@ -55,7 +54,7 @@ def convert():
         
         resultado = subprocess.run(comando, capture_output=True, text=True)
         
-        # Limpeza imediata de arquivos pesados para liberar espaço em disco
+   
         if os.path.exists(keras_zip_path): os.remove(keras_zip_path)
         if os.path.exists(legacy_h5_path): os.remove(legacy_h5_path)
         
